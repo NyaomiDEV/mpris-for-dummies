@@ -1,0 +1,14 @@
+{
+  "name": "mpris-for-dummies",
+  "version": "0.0.1",
+  "description": "I did this in an evening",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node ./test.js"
+  },
+  "author": "Naomi Calabretta <me@arytonex.pw>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "dbus-next": "^0.8.2"
+  }
+}
