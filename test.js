@@ -27,9 +27,9 @@ async function main(){
 		const iface = await dbusPO.getInterface("org.freedesktop.DBus");
 		iface.on("NameOwnerChanged", async (name, oldOwner, newOwner) => {
 			if(name.match(/org\.mpris\.MediaPlayer2/) !== null){
-				if(oldOwner == "")
+				if(oldOwner === "")
 					await addPlayer(name);
-				else if (newOwner == "")
+				else if (newOwner === "")
 					await deletePlayer(name);
 			}
 		});
@@ -50,7 +50,7 @@ async function addPlayer(name){
 	
 	console.log("Added player", name);
 	console.log(name, "Current playing song:",
-		mpris.Player.parseMetadata_raw(await players[name].Metadata)
+		await players[name].Metadata
 	);
 	console.log(name, "Current position:", Number(await players[name].Position) / 1000000);
 }

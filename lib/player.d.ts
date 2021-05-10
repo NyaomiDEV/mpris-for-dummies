@@ -5,13 +5,12 @@ export default class Player extends events.EventEmitter {
     available: boolean;
     constructor(dbusProxy: any);
     dispose(): void;
-    static parseMetadata_raw(metadata: any): {};
-    static parseMetadata_tidy(metadataRaw: any): any;
-    static basicMetadata(metadataTidy: any): {
+    static parseMetadataFromVariant(metadata: any): any;
+    static basicMetadata(metadata: any): {
         title: any;
         artist: any;
         album: any;
-        duration: any;
+        length: number;
     };
 }
 //# sourceMappingURL=player.d.ts.map

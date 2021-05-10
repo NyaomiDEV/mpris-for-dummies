@@ -98,7 +98,7 @@ export default class Player extends events.EventEmitter {
 		props.on("PropertiesChanged", (_iface, changed, /*_invalidated*/) => {
 			if(changed.Metadata){
 				// Music changed!
-				let _changed = Player.parseMetadata_raw(changed.Metadata.value);
+				let _changed = Player.parseMetadataFromVariant(changed.Metadata.value);
 				this.emit("musicChanged", _changed);
 			}
 			
@@ -125,29 +125,22 @@ export default class Player extends events.EventEmitter {
 		});
 	}
 	
-	static parseMetadata_raw(metadata){
+	static parseMetadataFromVariant(metadata){
 		if(typeof metadata == "undefined" || Object.keys(metadata).length === 0) return {};
 
-		let parsed = {};
+		const parsed: any = {};
 		for(let key in metadata)
-			parsed[key.replace("xesam:","").replace("mpris:","")] = metadata[key];
+			parsed[key] = metadata[key].value;
 		
 		return parsed;
 	}
 	
-	static parseMetadata_tidy(metadataRaw){
-		if(metadataRaw.length)
-			metadataRaw.length = Number(metadataRaw.length) / 1000000;
-		
-		return metadataRaw;
-	}
-	
-	static basicMetadata(metadataTidy){
+	static basicMetadata(metadata){
 		return {
-			title: metadataTidy.title,
-			artist: metadataTidy.artist.join("; "),
-			album: metadataTidy.album,
-			duration: metadataTidy.duration
+			title: metadata["xesam:title"],
+			artist: metadata["xesam:artist"].join("; "),
+			album: metadata["xesam:album"],
+			length: Number(metadata["mpris:length"]) / 1000000
 		};
 	}
 
