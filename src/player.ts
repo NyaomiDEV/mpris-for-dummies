@@ -13,24 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-"use strict";
+import events from "events";
+import dbus from "dbus-next";
 
-const events = require("events");
-const dbus = require("dbus-next");
+type Binder = {
+	get?: () => any,
+	// eslint-disable-next-line no-unused-vars
+	set?: (value: any) => any
+}
 
-module.exports = class Player extends events.EventEmitter {
+export default class Player extends events.EventEmitter {
+	// eslint-disable-next-line no-unused-vars
+	_monitorFunction: (name: string, oldOwner: string, newOwner: string) => void;
+	available: boolean;
 	
 	constructor(dbusProxy){
 		super();
 		// Register a way to monitor if the player is active
 		this.available = true;
-		
+
 		this._monitorFunction = (name, oldOwner, newOwner) => {
-			if(name === dbusProxy.name){
-				if(oldOwner == ""){
+			if (name === dbusProxy.name) {
+				if (oldOwner === "") {
 					this.available = true;
 					this.emit("connected");
-				}else if(newOwner == ""){
+				} else if (newOwner === "") {
 					this.available = false;
 					this.emit("disconnected");
 				}
@@ -43,50 +50,55 @@ module.exports = class Player extends events.EventEmitter {
 			iface.on("NameOwnerChanged", this._monitorFunction);
 		});
 		
-		const player = dbusProxy.getInterface('org.mpris.MediaPlayer2.Player');
-		const props = dbusProxy.getInterface('org.freedesktop.DBus.Properties');
+		const player = dbusProxy.getInterface("org.mpris.MediaPlayer2.Player");
+		const props = dbusProxy.getInterface("org.freedesktop.DBus.Properties");
 		
 		console.log(player);
 		
 		// Register methods like play, pause etc
-		for(let method of player["$methods"]){
+		for(let method of player.$methods){
 			Object.defineProperty(this, method.name, {
 				get: () => player[method.name]
 			});
 		}
 		
 		// Register properties like position, metadata etc
-		for(let property of player["$properties"]){
-			let binder = {};
+		for(let property of player.$properties){
+			const binder: Binder = {};
+
 			binder.get = async () => {
 				const result = await props.Get("org.mpris.MediaPlayer2.Player", property.name);
-				if(property.type == "a{sv}"){
+				if (property.type === "a{sv}") {
 					let obj = {};
-					for(let key in result.value)
+					for (let key in result.value)
 						obj[key] = result.value[key].value;
 					result.value = obj;
 				}
 				return result.value;
-			}
-			
+			};
+
 			if(property.access === "readwrite"){
 				binder.set = async (value) => {
-					await props.Set(
+					const variant = new dbus.Variant();
+					variant.signature = property.type;
+					variant.value = value;
+
+					return props.Set(
 						"org.mpris.MediaPlayer2.Player",
 						property.name,
-						new dbus.Variant(property.type, value)
+						variant
 					);
-				}
+				};
 			}
 			
 			Object.defineProperty(this, property.name, binder);
 		}
 		
 		// Register playback status and metadata events
-		props.on('PropertiesChanged', (iface, changed, invalidated) => {
+		props.on("PropertiesChanged", (_iface, changed, /*_invalidated*/) => {
 			if(changed.Metadata){
 				// Music changed!
-				let _changed = this.constructor.parseMetadata_raw(changed.Metadata.value);
+				let _changed = Player.parseMetadata_raw(changed.Metadata.value);
 				this.emit("musicChanged", _changed);
 			}
 			
@@ -95,8 +107,8 @@ module.exports = class Player extends events.EventEmitter {
 				this.emit("playbackStatusChanged", changed.PlaybackStatus.value);
 			
 			else
-				for(let key in changed)
-					this.emit("propertyChanged", key, changed[key].value);
+			{for(let key in changed)
+				this.emit("propertyChanged", key, changed[key].value);}
 		});
 		
 		// Register seeked event
@@ -114,29 +126,29 @@ module.exports = class Player extends events.EventEmitter {
 	}
 	
 	static parseMetadata_raw(metadata){
-		if(typeof metadata == "undefined" || Object.keys(metadata).length == 0) return {};
+		if(typeof metadata == "undefined" || Object.keys(metadata).length === 0) return {};
 
 		let parsed = {};
-		for(let key in metadata){
+		for(let key in metadata)
 			parsed[key.replace("xesam:","").replace("mpris:","")] = metadata[key];
-		}
+		
 		return parsed;
 	}
 	
 	static parseMetadata_tidy(metadataRaw){
-		if(metadata.length)
-			metadata.length = Number(metadata.length) / 1000000;
+		if(metadataRaw.length)
+			metadataRaw.length = Number(metadataRaw.length) / 1000000;
 		
-		return metadata;
+		return metadataRaw;
 	}
 	
 	static basicMetadata(metadataTidy){
 		return {
-			title: metadata.title,
-			artist: metadata.artist.join("; "),
-			album: metadata.album,
-			duration: metadata.duration
-		}
+			title: metadataTidy.title,
+			artist: metadataTidy.artist.join("; "),
+			album: metadataTidy.album,
+			duration: metadataTidy.duration
+		};
 	}
 
 }

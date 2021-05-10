@@ -15,31 +15,32 @@
  */
 "use strict";
 
-const dbus = require("dbus-next");
-const player = require("./player.js");
+import { sessionBus, Message, MessageBus } from "dbus-next";
+import player from "./player";
 
-module.exports = class PlayerFactory {
+export default class PlayerFactory {
+	bus: MessageBus;
 	
 	constructor(){
-		this.bus = dbus.sessionBus();
+		this.bus = sessionBus();
 	}
 	
 	async getPlayerNames(){
-		const message = new dbus.Message({
+		const message = new Message({
 			destination: "org.freedesktop.DBus",
 			path: "/org/freedesktop/DBus",
 			interface: "org.freedesktop.DBus",
-			member: 'ListNames'
+			member: "ListNames"
 		});
-		let reply = await this.bus.call(message);
-		reply = reply.body[0].filter(x => { return x.match(/org\.mpris\.MediaPlayer2/) !== null });
-		return reply;
+		const reply = await this.bus.call(message);
+		const body = reply?.body[0].filter(x => x.match(/org\.mpris\.MediaPlayer2/) !== null);
+		return body;
 	}
 	
-	async getPlayer(playerServiceName = null){
+	async getPlayer(playerServiceName?){
 		if(playerServiceName === null){
 			const playerNames = await this.getPlayerNames();
-			if(playerNames.length == 0) return undefined;
+			if(playerNames.length === 0) return undefined;
 			playerServiceName = playerNames[0];
 		}
 		const proxy = await this.bus.getProxyObject(playerServiceName, "/org/mpris/MediaPlayer2");
