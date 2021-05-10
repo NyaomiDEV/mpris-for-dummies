@@ -2,11 +2,20 @@
   "name": "mpris-for-dummies",
   "version": "0.0.1",
   "description": "I did this in an evening",
-  "main": "dist",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "LICENSE",
+    "package.json",
+    "README.md",
+    "tsconfig.json",
+    "test.js"
+  ],
   "scripts": {
     "lint": "eslint src/ --ext .ts",
     "build": "tsc",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf lib",
     "test": "tsc && node test.js"
   },
   "author": "Naomi Calabretta <me@arytonex.pw>",
