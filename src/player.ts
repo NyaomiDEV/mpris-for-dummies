@@ -138,7 +138,7 @@ export default class Player extends events.EventEmitter {
 	static basicMetadata(metadata){
 		return {
 			title: metadata["xesam:title"],
-			artist: metadata["xesam:artist"].join("; "),
+			artist: typeof metadata["xesam:artist"] === "string" ? metadata["xesam:artist"] : metadata["xesam:artist"].join("; "),
 			album: metadata["xesam:album"],
 			length: Number(metadata["mpris:length"]) / 1000000
 		};
