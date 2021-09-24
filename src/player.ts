@@ -16,21 +16,35 @@
 import events from "events";
 import dbus from "dbus-next";
 
-type Binder = {
-	get?: () => any,
+type Binder<T> = {
+	get?: () => T,
 	// eslint-disable-next-line no-unused-vars
-	set?: (value: any) => any
+	set?: (value: T) => T
+}
+
+type MPRIS2 = {
+	Raise: () => void,
+	Quit: () => void,
+	canRaise: boolean,
+	canQuit: boolean,
+	HasTrackList: boolean,
+	Identity: string,
+	DesktopEntry: string,
+	SupportedUriSchemes: string[],
+	SupportedMimeTypes: string[]
 }
 
 export default class Player extends events.EventEmitter {
 	// eslint-disable-next-line no-unused-vars
 	_monitorFunction: (name: string, oldOwner: string, newOwner: string) => void;
 	available: boolean;
+	app: Partial<MPRIS2>;
 	
 	constructor(dbusProxy){
 		super();
 		// Register a way to monitor if the player is active
 		this.available = true;
+		this.app = {};
 
 		this._monitorFunction = (name, oldOwner, newOwner) => {
 			if (name === dbusProxy.name) {
@@ -50,12 +64,20 @@ export default class Player extends events.EventEmitter {
 			iface.on("NameOwnerChanged", this._monitorFunction);
 		});
 		
+		const app = dbusProxy.getInterface("org.mpris.MediaPlayer2");
 		const player = dbusProxy.getInterface("org.mpris.MediaPlayer2.Player");
 		const props = dbusProxy.getInterface("org.freedesktop.DBus.Properties");
 		
-		console.log(player);
+		//console.log(app);
+		//console.log(player);
 		
 		// Register methods like play, pause etc
+		for (let method of app.$methods) {
+			Object.defineProperty(this.app, method.name, {
+				get: () => app[method.name]
+			});
+		}
+
 		for(let method of player.$methods){
 			Object.defineProperty(this, method.name, {
 				get: () => player[method.name]
@@ -63,8 +85,39 @@ export default class Player extends events.EventEmitter {
 		}
 		
 		// Register properties like position, metadata etc
+		for (let property of app.$properties) {
+			const binder: Binder<any> = {};
+
+			binder.get = async () => {
+				const result = await props.Get("org.mpris.MediaPlayer2", property.name);
+				if (property.type === "a{sv}") {
+					let obj = {};
+					for (let key in result.value)
+						obj[key] = result.value[key].value;
+					result.value = obj;
+				}
+				return result.value;
+			};
+
+			if (property.access === "readwrite") {
+				binder.set = async (value) => {
+					const variant = new dbus.Variant();
+					variant.signature = property.type;
+					variant.value = value;
+
+					return props.Set(
+						"org.mpris.MediaPlayer2.Player",
+						property.name,
+						variant
+					);
+				};
+			}
+
+			Object.defineProperty(this.app, property.name, binder);
+		}
+
 		for(let property of player.$properties){
-			const binder: Binder = {};
+			const binder: Binder<any> = {};
 
 			binder.get = async () => {
 				const result = await props.Get("org.mpris.MediaPlayer2.Player", property.name);
@@ -115,6 +168,8 @@ export default class Player extends events.EventEmitter {
 		player.on("Seeked", (seekedToPos) => {
 			this.emit("seeked", Number(seekedToPos) / 1000000);
 		});
+
+		console.log(this);
 	}
 
 	dispose(){
