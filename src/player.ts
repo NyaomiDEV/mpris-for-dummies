@@ -17,34 +17,72 @@ import events from "events";
 import dbus from "dbus-next";
 
 type Binder<T> = {
-	get?: () => T,
+	get?: () => Promise<T>,
 	// eslint-disable-next-line no-unused-vars
-	set?: (value: T) => T
+	set?: (value: T) => Promise<void>
 }
 
-type MPRIS2 = {
-	Raise: () => void,
-	Quit: () => void,
-	canRaise: boolean,
-	canQuit: boolean,
-	HasTrackList: boolean,
-	Identity: string,
-	DesktopEntry: string,
-	SupportedUriSchemes: string[],
-	SupportedMimeTypes: string[]
+export interface MPRIS2 {
+	Raise?: () => Promise<void>,
+	Quit?: () => Promise<void>,
+
+	canRaise?: Promise<boolean>,
+	canQuit?: Promise<boolean>,
+
+	HasTrackList?: Promise<boolean>,
+
+	Identity?: Promise<string>,
+	DesktopEntry?: Promise<string>,
+	SupportedUriSchemes?: Promise<string[]>,
+	SupportedMimeTypes?: Promise<string[]>
 }
 
-export default class Player extends events.EventEmitter {
+export interface MPRIS2Player {
+	available: boolean,
+	app: MPRIS2,
+
+	Next?: () => Promise<void>,
+	Previous?: () => Promise<void>,
+	Pause?: () => Promise<void>,
+	PlayPause?: () => Promise<void>,
+	Stop?: () => Promise<void>,
+	Play?: () => Promise<void>,
+	Seek?: () => Promise<void>,
+	SetPosition?: () => Promise<void>,
+	OpenUri?: () => Promise<void>,
+
+	PlaybackStatus?: Promise<string>,
+	LoopStatus?: Promise<string>,
+	Rate?: Promise<number>,
+	Shuffle?: Promise<boolean>,
+	Metadata?: Promise<Array<{[x: string]: any}>>,
+	Volume?: Promise<number>,
+	// eslint-disable-next-line no-undef
+	Position?: Promise<BigInt>,
+	MinimumRate?: Promise<number>,
+	MaximumRate?: Promise<number>,
+
+	CanGoNext?: Promise<boolean>,
+	CanGoPrevious?: Promise<boolean>,
+	CanPlay?: Promise<boolean>,
+	CanPause?: Promise<boolean>,
+	CanSeek?: Promise<boolean>,
+	CanControl?: Promise<boolean>
+}
+
+export default class Player extends events.EventEmitter implements MPRIS2Player {
 	// eslint-disable-next-line no-unused-vars
 	_monitorFunction: (name: string, oldOwner: string, newOwner: string) => void;
+	private _proxyObject: dbus.ProxyObject;
 	available: boolean;
-	app: Partial<MPRIS2>;
+	app: MPRIS2;
 	
-	constructor(dbusProxy){
+	constructor(dbusProxy: dbus.ProxyObject){
 		super();
 		// Register a way to monitor if the player is active
 		this.available = true;
 		this.app = {};
+		this._proxyObject = dbusProxy;
 
 		this._monitorFunction = (name, oldOwner, newOwner) => {
 			if (name === dbusProxy.name) {
@@ -57,6 +95,10 @@ export default class Player extends events.EventEmitter {
 				}
 			}
 		};
+
+		// Register methods like play, pause etc
+		this._bindProxyObject("org.mpris.MediaPlayer2", this.app);
+		this._bindProxyObject("org.mpris.MediaPlayer2.Player", this);
 		
 		// Register listeners to keep track of the media player's connection status
 		dbus.sessionBus().getProxyObject("org.freedesktop.DBus", "/org/freedesktop/DBus").then(async (dbusPO) => {
@@ -64,90 +106,8 @@ export default class Player extends events.EventEmitter {
 			iface.on("NameOwnerChanged", this._monitorFunction);
 		});
 		
-		const app = dbusProxy.getInterface("org.mpris.MediaPlayer2");
-		const player = dbusProxy.getInterface("org.mpris.MediaPlayer2.Player");
-		const props = dbusProxy.getInterface("org.freedesktop.DBus.Properties");
-		
-		//console.log(app);
-		//console.log(player);
-		
-		// Register methods like play, pause etc
-		for (let method of app.$methods) {
-			Object.defineProperty(this.app, method.name, {
-				get: () => app[method.name]
-			});
-		}
-
-		for(let method of player.$methods){
-			Object.defineProperty(this, method.name, {
-				get: () => player[method.name]
-			});
-		}
-		
-		// Register properties like position, metadata etc
-		for (let property of app.$properties) {
-			const binder: Binder<any> = {};
-
-			binder.get = async () => {
-				const result = await props.Get("org.mpris.MediaPlayer2", property.name);
-				if (property.type === "a{sv}") {
-					let obj = {};
-					for (let key in result.value)
-						obj[key] = result.value[key].value;
-					result.value = obj;
-				}
-				return result.value;
-			};
-
-			if (property.access === "readwrite") {
-				binder.set = async (value) => {
-					const variant = new dbus.Variant();
-					variant.signature = property.type;
-					variant.value = value;
-
-					return props.Set(
-						"org.mpris.MediaPlayer2.Player",
-						property.name,
-						variant
-					);
-				};
-			}
-
-			Object.defineProperty(this.app, property.name, binder);
-		}
-
-		for(let property of player.$properties){
-			const binder: Binder<any> = {};
-
-			binder.get = async () => {
-				const result = await props.Get("org.mpris.MediaPlayer2.Player", property.name);
-				if (property.type === "a{sv}") {
-					let obj = {};
-					for (let key in result.value)
-						obj[key] = result.value[key].value;
-					result.value = obj;
-				}
-				return result.value;
-			};
-
-			if(property.access === "readwrite"){
-				binder.set = async (value) => {
-					const variant = new dbus.Variant();
-					variant.signature = property.type;
-					variant.value = value;
-
-					return props.Set(
-						"org.mpris.MediaPlayer2.Player",
-						property.name,
-						variant
-					);
-				};
-			}
-			
-			Object.defineProperty(this, property.name, binder);
-		}
-		
 		// Register playback status and metadata events
+		const props = dbusProxy.getInterface("org.freedesktop.DBus.Properties");
 		props.on("PropertiesChanged", (_iface, changed, /*_invalidated*/) => {
 			if(changed.Metadata){
 				// Music changed!
@@ -165,11 +125,9 @@ export default class Player extends events.EventEmitter {
 		});
 		
 		// Register seeked event
-		player.on("Seeked", (seekedToPos) => {
+		this._proxyObject.getInterface("org.mpris.MediaPlayer2.Player").on("Seeked", (seekedToPos) => {
 			this.emit("seeked", Number(seekedToPos) / 1000000);
 		});
-
-		console.log(this);
 	}
 
 	dispose(){
@@ -178,6 +136,46 @@ export default class Player extends events.EventEmitter {
 			const iface = await dbusPO.getInterface("org.freedesktop.DBus");
 			iface.removeListener("NameOwnerChanged", this._monitorFunction);
 		});
+	}
+
+	private _bindProxyObject(from: string, to){
+		const props = this._proxyObject.getInterface("org.freedesktop.DBus.Properties");
+		const fromClient = this._proxyObject.getInterface(from);
+		for (let method of fromClient.$methods as unknown as any[]) {
+			Object.defineProperty(to, method.name, {
+				get: () => fromClient[method.name]
+			});
+		}
+		for (let property of fromClient.$properties as unknown as any[]) {
+			const binder: Binder<any> = {};
+
+			binder.get = async () => {
+				const result = await props.Get(from, property.name);
+				if (property.type === "a{sv}") {
+					let obj = {};
+					for (let key in result.value)
+						obj[key] = result.value[key].value;
+					result.value = obj;
+				}
+				return result.value;
+			};
+
+			if (property.access === "readwrite") {
+				binder.set = async (value) => {
+					const variant = new dbus.Variant();
+					variant.signature = property.type;
+					variant.value = value;
+
+					return await props.Set(
+						from,
+						property.name,
+						variant
+					);
+				};
+			}
+
+			Object.defineProperty(to, property.name, binder);
+		}
 	}
 	
 	static parseMetadataFromVariant(metadata){
