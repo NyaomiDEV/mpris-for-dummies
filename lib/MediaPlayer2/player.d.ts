@@ -1,0 +1,44 @@
+import { ProxyObject } from "dbus-next";
+import ProxyAbstraction from "../proxyabstraction";
+import { MetadataMap } from "../types";
+export default class Player extends ProxyAbstraction {
+    private _interfaceName;
+    private _interface;
+    private _ready;
+    PlaybackStatus: "Playing" | "Paused" | "Stopped";
+    MinimumRate: number;
+    MaximumRate: number;
+    Metadata: MetadataMap;
+    Position: BigInt;
+    CanGoNext: boolean;
+    CanGoPrevious: boolean;
+    CanPlay: boolean;
+    CanPause: boolean;
+    CanSeek: boolean;
+    CanControl: boolean;
+    private _LoopStatus;
+    private _Rate;
+    private _Shuffle;
+    private _Volume;
+    constructor(proxyObject: ProxyObject);
+    _init(): Promise<void>;
+    whenReady(): Promise<void>;
+    Next(): Promise<void>;
+    Previous(): Promise<void>;
+    Pause(): Promise<void>;
+    PlayPause(): Promise<void>;
+    Stop(): Promise<void>;
+    Play(): Promise<void>;
+    Seek(offset: number): Promise<void>;
+    SetPosition(trackId: string, offset: number): Promise<void>;
+    OpenUri(uri: string): Promise<void>;
+    get LoopStatus(): "None" | "Track" | "Playlist";
+    set LoopStatus(value: "None" | "Track" | "Playlist");
+    get Rate(): number;
+    set Rate(value: number);
+    get Shuffle(): boolean;
+    set Shuffle(value: boolean);
+    get Volume(): number;
+    set Volume(value: number);
+}
+//# sourceMappingURL=player.d.ts.map
