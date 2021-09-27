@@ -116,8 +116,9 @@ export default class Player extends ProxyAbstraction {
 		await this._interface.Seek(offset);
 	}
 
-	async SetPosition(trackId: string, offset: number): Promise<void> {
-		await this._interface.Previous(trackId, offset);
+	// eslint-disable-next-line no-undef
+	async SetPosition(trackId: string, offset: BigInt): Promise<void> {
+		await this._interface.SetPosition(trackId, offset);
 	}
 
 	// eslint-disable-next-line no-undef

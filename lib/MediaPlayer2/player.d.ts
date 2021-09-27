@@ -29,7 +29,7 @@ export default class Player extends ProxyAbstraction {
     Stop(): Promise<void>;
     Play(): Promise<void>;
     Seek(offset: number): Promise<void>;
-    SetPosition(trackId: string, offset: number): Promise<void>;
+    SetPosition(trackId: string, offset: BigInt): Promise<void>;
     GetPosition(): Promise<BigInt>;
     OpenUri(uri: string): Promise<void>;
     get LoopStatus(): "None" | "Track" | "Playlist";
