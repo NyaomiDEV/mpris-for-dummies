@@ -48,9 +48,9 @@ async function addPlayer(name){
 	players[name].whenReady().then(async () => {
 		console.log("Added player", name);
 		console.log(name, "Current playing song:", PlayerFactory.marshallVariants(players[name].Player.Metadata));
-		console.log(name, "Current position:", Number(players[name].Player.Position) / 1000000);
+		console.log(name, "Current position:", Number(await players[name].Player.GetPosition()) / 1000000);
 
-		players[name].Player.on("Seeked", (to) => console.log("Seeked to", to / 1000000));
+		players[name].Player.on("Seeked", (to) => console.log("Seeked to", Number(to) / 1000000));
 		players[name].Player.on("PropertiesChanged", (changed, invalidated) => console.log("Player Properties Changed", PlayerFactory.marshallVariants(changed), invalidated));
 		players[name].on("PropertiesChanged", (changed, invalidated) => console.log("MediaPlayer2 Properties Changed", PlayerFactory.marshallVariants(changed), invalidated));
 	});

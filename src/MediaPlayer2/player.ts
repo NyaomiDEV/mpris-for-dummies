@@ -15,7 +15,6 @@ export default class Player extends ProxyAbstraction {
 	MaximumRate: number = 1;
 	Metadata: MetadataMap = {};
 	// eslint-disable-next-line no-undef
-	Position: BigInt = BigInt(0);
 	
 	CanGoNext: boolean = false;
 	CanGoPrevious: boolean = false;
@@ -29,22 +28,22 @@ export default class Player extends ProxyAbstraction {
 	private _Shuffle: boolean = false;
 	private _Volume: number = 0;
 
-	constructor(proxyObject: ProxyObject) {
+	constructor(proxyObject: ProxyObject, propsIface: ClientInterface) {
 		super(proxyObject);
 		this._interface = this._proxyObject.getInterface(this._interfaceName);
 
-		const props = this._proxyObject.getInterface("org.freedesktop.DBus.Properties");
-		props.on("PropertiesChanged", (iface, changed, invalidated) => {
+		propsIface.on("PropertiesChanged", (iface, changed, invalidated) => {
 			if (iface !== "org.mpris.MediaPlayer2.Player") return;
 
 			for (let key in changed) {
+				const value = changed[key];
 				switch(key){
 					case "LoopStatus": key = "_LoopStatus"; break;
 					case "Rate": key = "_Rate"; break;
 					case "Shuffle": key = "_Shuffle"; break;
 					case "Volume": key = "_Volume"; break;
 				}
-				this[key] = marshallVariants(changed[key]);
+				this[key] = marshallVariants(value);
 			}
 
 			for (let key of invalidated) {
@@ -73,7 +72,6 @@ export default class Player extends ProxyAbstraction {
 		this._Shuffle = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Shuffle"));
 		this._Volume = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Volume"));
 		this.Metadata = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Metadata"));
-		this.Position = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Position"));
 		this.CanGoNext = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanGoNext"));
 		this.CanGoPrevious = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanGoPrevious"));
 		this.CanPause = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanPause"));
@@ -120,6 +118,11 @@ export default class Player extends ProxyAbstraction {
 
 	async SetPosition(trackId: string, offset: number): Promise<void> {
 		await this._interface.Previous(trackId, offset);
+	}
+
+	// eslint-disable-next-line no-undef
+	async GetPosition(): Promise<BigInt> {
+		return marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Position"));
 	}
 
 	async OpenUri(uri: string): Promise<void> {

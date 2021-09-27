@@ -33,8 +33,9 @@ export default class MediaPlayer2 extends ProxyAbstraction{
 			if (iface !== "org.mpris.MediaPlayer2") return;
 
 			for (let key in changed){
+				const value = changed[key];
 				if(key === "Fullscreen") key = "_Fullscreen";
-				this[key] = marshallVariants(changed[key]);
+				this[key] = marshallVariants(value);
 			}
 
 			for (let key of invalidated){
@@ -46,7 +47,7 @@ export default class MediaPlayer2 extends ProxyAbstraction{
 		});
 
 		this._init();
-		this.Player = new Player(this._proxyObject);
+		this.Player = new Player(this._proxyObject, props);
 	}
 
 	async _init(): Promise<void> {
