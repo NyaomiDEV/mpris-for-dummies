@@ -1,8 +1,13 @@
 import { ProxyObject, Variant } from "dbus-next";
 
-export async function getProperty(proxyObject: ProxyObject, iface: string, property: string): Promise<Variant<any>>{
+export async function getProperty(proxyObject: ProxyObject, iface: string, property: string): Promise<Variant<any> | undefined>{
 	const props = proxyObject.getInterface("org.freedesktop.DBus.Properties");
-	const result: Variant<any> = await props.Get(iface, property);
+	let result: Variant<any> | undefined;
+	try{
+		result = await props.Get(iface, property);
+	}catch(_){
+		result = undefined;
+	}
 	return result;
 }
 
