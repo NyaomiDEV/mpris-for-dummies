@@ -53,7 +53,7 @@ async function addPlayer(name){
 		players[name].Player.on("Seeked", (to) => console.log("Seeked to", Number(to) / 1000000));
 		players[name].Player.on("PropertiesChanged", (changed, invalidated) => console.log("Player Properties Changed", changed, invalidated));
 		players[name].on("PropertiesChanged", (changed, invalidated) => console.log("MediaPlayer2 Properties Changed", changed, invalidated));
-	});
+	}).catch(console.error);
 }
 
 async function deletePlayer(name){

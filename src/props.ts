@@ -11,6 +11,17 @@ export async function getProperty(proxyObject: ProxyObject, iface: string, prope
 	return result;
 }
 
+export async function getAllProperties(proxyObject: ProxyObject, iface: string): Promise <Variant<any>[] | undefined>{
+	const props = proxyObject.getInterface("org.freedesktop.DBus.Properties");
+	let result: Variant<any>[] | undefined;
+	try {
+		result = await props.GetAll(iface);
+	} catch (_) {
+		result = undefined;
+	}
+	return result;
+}
+
 export async function setProperty(proxyObject: ProxyObject, iface: string, property: string, signature: string, value: any): Promise<void>{
 	const props = proxyObject.getInterface("org.freedesktop.DBus.Properties");
 	const variant = new Variant();

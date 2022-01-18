@@ -1,6 +1,6 @@
 import { ClientInterface, ProxyObject } from "dbus-next";
 import ProxyAbstraction from "../proxyabstraction";
-import { getProperty, setProperty } from "../props";
+import { getAllProperties, setProperty } from "../props";
 import Player from "./player";
 import { marshallVariants } from "../utils";
 
@@ -46,20 +46,23 @@ export default class MediaPlayer2 extends ProxyAbstraction{
 			this.emit("PropertiesChanged", marshallVariants(changed), invalidated);
 		});
 
-		this._init();
 		this.Player = new Player(this._proxyObject, props);
+
+		this._init();
 	}
 
 	async _init(): Promise<void> {
-		this.CanRaise = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanRaise"));
-		this.CanQuit = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanQuit"));
-		this.CanSetFullscreen = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanSetFullscreen"));
-		this.HasTrackList = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "HasTrackList"));
-		this.Identity = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Identity"));
-		this.DesktopEntry = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "DesktopEntry"));
-		this.SupportedUriSchemes = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "SupportedUriSchemes"));
-		this.SupportedMimeTypes = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "SupportedMimeTypes"));
-		this._Fullscreen = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Fullscreen"));
+		const props = marshallVariants(await getAllProperties(this._proxyObject, this._interfaceName));
+
+		this.CanRaise = props.CanRaise;
+		this.CanQuit = props.CanQuit;
+		this.HasTrackList = props.HasTrackList;
+		this.Identity = props.Identity;
+		this.DesktopEntry = props.DesktopEntry;
+		this.SupportedUriSchemes = props.SupportedUriSchemes;
+		this.SupportedMimeTypes = props.SupportedMimeTypes;
+		this.CanSetFullscreen = props.CanSetFullscreen;
+		this._Fullscreen = props.Fullscreen;
 
 		await this.Player.whenReady();
 		this._ready = true;

@@ -1,7 +1,7 @@
 import { ClientInterface, ProxyObject } from "dbus-next";
 import ProxyAbstraction from "../proxyabstraction";
 import { MetadataMap } from "../types";
-import { getProperty, setProperty } from "../props";
+import { getAllProperties, getProperty, setProperty } from "../props";
 import { marshallVariants } from "../utils";
 
 export default class Player extends ProxyAbstraction {
@@ -66,18 +66,20 @@ export default class Player extends ProxyAbstraction {
 	}
 
 	async _init(): Promise<void> {
-		this.PlaybackStatus = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "PlaybackStatus"));
-		this._LoopStatus = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "LoopStatus"));
-		this._Rate = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Rate"));
-		this._Shuffle = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Shuffle"));
-		this._Volume = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Volume"));
-		this.Metadata = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "Metadata"));
-		this.CanGoNext = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanGoNext"));
-		this.CanGoPrevious = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanGoPrevious"));
-		this.CanPause = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanPause"));
-		this.CanPlay = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanPlay"));
-		this.CanSeek = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanSeek"));
-		this.CanControl = marshallVariants(await getProperty(this._proxyObject, this._interfaceName, "CanControl"));
+		const props = marshallVariants(await getAllProperties(this._proxyObject, this._interfaceName));
+
+		this.PlaybackStatus = props.PlaybackStatus;
+		this._LoopStatus = props.LoopStatus;
+		this._Rate = props.Rate;
+		this._Shuffle = props.Shuffle;
+		this._Volume = props.Volume;
+		this.Metadata = props.Metadata;
+		this.CanGoNext = props.CanGoNext;
+		this.CanGoPrevious = props.CanGoPrevious;
+		this.CanPause = props.CanPause;
+		this.CanPlay = props.CanPlay;
+		this.CanSeek = props.CanSeek;
+		this.CanControl = props.CanControl;
 
 		this._ready = true;
 	}
