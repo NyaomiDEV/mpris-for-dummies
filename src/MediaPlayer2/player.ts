@@ -77,6 +77,8 @@ export default class Player extends ProxyAbstraction {
 
 		const props = this._proxyObject.getInterface("org.freedesktop.DBus.Properties");
 		props.removeListener("PropertiesChanged", this.propsListener);
+
+		this._interface.removeListener("Seeked", this.seekedListener);
 	}
 
 	async _init(): Promise<void> {
