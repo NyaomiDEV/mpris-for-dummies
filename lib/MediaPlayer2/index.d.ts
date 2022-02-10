@@ -15,7 +15,9 @@ export default class MediaPlayer2 extends ProxyAbstraction {
     SupportedMimeTypes: string[];
     private _Fullscreen;
     Player: Player;
+    private propsListener;
     constructor(proxyObject: ProxyObject);
+    destruct(): void;
     _init(): Promise<void>;
     whenReady(): Promise<void>;
     Raise(): Promise<void>;

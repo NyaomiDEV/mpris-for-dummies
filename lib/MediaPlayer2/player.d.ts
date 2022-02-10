@@ -1,4 +1,4 @@
-import { ClientInterface, ProxyObject } from "dbus-next";
+import { ProxyObject } from "dbus-next";
 import ProxyAbstraction from "../proxyabstraction";
 import { MetadataMap } from "../types";
 export default class Player extends ProxyAbstraction {
@@ -19,7 +19,10 @@ export default class Player extends ProxyAbstraction {
     private _Rate;
     private _Shuffle;
     private _Volume;
-    constructor(proxyObject: ProxyObject, propsIface: ClientInterface);
+    private propsListener;
+    private seekedListener;
+    constructor(proxyObject: ProxyObject);
+    destruct(): void;
     _init(): Promise<void>;
     whenReady(): Promise<void>;
     Next(): Promise<void>;

@@ -24,31 +24,41 @@ export default class MediaPlayer2 extends ProxyAbstraction{
 
 	Player: Player;
 
+	private propsListener = (iface: string, changed: { [x: string]: any; }, invalidated: string[]) => {
+		if (iface !== "org.mpris.MediaPlayer2") return;
+
+		for (let key in changed) {
+			const value = changed[key];
+			if (key === "Fullscreen") key = "_Fullscreen";
+			this[key] = marshallVariants(value);
+		}
+
+		for (let key of invalidated) {
+			if (key === "Fullscreen") key = "_Fullscreen";
+			delete this[key];
+		}
+
+		this.emit("PropertiesChanged", marshallVariants(changed), invalidated);
+	}
+
 	constructor(proxyObject: ProxyObject){
 		super(proxyObject);
 		this._interface = this._proxyObject.getInterface(this._interfaceName);
 
 		const props = this._proxyObject.getInterface("org.freedesktop.DBus.Properties");
-		props.on("PropertiesChanged", (iface, changed, invalidated) => {
-			if (iface !== "org.mpris.MediaPlayer2") return;
+		props.on("PropertiesChanged", this.propsListener);
 
-			for (let key in changed){
-				const value = changed[key];
-				if(key === "Fullscreen") key = "_Fullscreen";
-				this[key] = marshallVariants(value);
-			}
-
-			for (let key of invalidated){
-				if (key === "Fullscreen") key = "_Fullscreen";
-				delete this[key];
-			}
-
-			this.emit("PropertiesChanged", marshallVariants(changed), invalidated);
-		});
-
-		this.Player = new Player(this._proxyObject, props);
+		this.Player = new Player(this._proxyObject);
 
 		this._init();
+	}
+
+	destruct(){
+		this.Player.destruct();
+		this.removeAllListeners();
+
+		const props = this._proxyObject.getInterface("org.freedesktop.DBus.Properties");
+		props.removeListener("PropertiesChanged", this.propsListener);
 	}
 
 	async _init(): Promise<void> {

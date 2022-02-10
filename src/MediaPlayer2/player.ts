@@ -28,41 +28,55 @@ export default class Player extends ProxyAbstraction {
 	private _Shuffle: boolean = false;
 	private _Volume: number = 0;
 
-	constructor(proxyObject: ProxyObject, propsIface: ClientInterface) {
+	private propsListener = (iface, changed, invalidated) => {
+		if (iface !== "org.mpris.MediaPlayer2.Player") return;
+
+		for (let key in changed) {
+			const value = changed[key];
+			switch (key) {
+				case "LoopStatus": key = "_LoopStatus"; break;
+				case "Rate": key = "_Rate"; break;
+				case "Shuffle": key = "_Shuffle"; break;
+				case "Volume": key = "_Volume"; break;
+			}
+			this[key] = marshallVariants(value);
+		}
+
+		for (let key of invalidated) {
+			switch (key) {
+				case "LoopStatus": key = "_LoopStatus"; break;
+				case "Rate": key = "_Rate"; break;
+				case "Shuffle": key = "_Shuffle"; break;
+				case "Volume": key = "_Volume"; break;
+			}
+			delete this[key];
+		}
+
+		this.emit("PropertiesChanged", marshallVariants(changed), invalidated);
+	}
+
+	// eslint-disable-next-line no-undef
+	private seekedListener = (position: BigInt) => {
+		this.emit("Seeked", position);
+	}
+
+	constructor(proxyObject: ProxyObject) {
 		super(proxyObject);
 		this._interface = this._proxyObject.getInterface(this._interfaceName);
 
-		propsIface.on("PropertiesChanged", (iface, changed, invalidated) => {
-			if (iface !== "org.mpris.MediaPlayer2.Player") return;
+		const props = this._proxyObject.getInterface("org.freedesktop.DBus.Properties");
+		props.on("PropertiesChanged", this.propsListener);
 
-			for (let key in changed) {
-				const value = changed[key];
-				switch(key){
-					case "LoopStatus": key = "_LoopStatus"; break;
-					case "Rate": key = "_Rate"; break;
-					case "Shuffle": key = "_Shuffle"; break;
-					case "Volume": key = "_Volume"; break;
-				}
-				this[key] = marshallVariants(value);
-			}
-
-			for (let key of invalidated) {
-				switch (key) {
-					case "LoopStatus": key = "_LoopStatus"; break;
-					case "Rate": key = "_Rate"; break;
-					case "Shuffle": key = "_Shuffle"; break;
-					case "Volume": key = "_Volume"; break;
-				}
-				delete this[key];
-			}
-
-			this.emit("PropertiesChanged", marshallVariants(changed), invalidated);
-		});
-
-		// eslint-disable-next-line no-undef
-		this._interface.on("Seeked", (position: BigInt) => this.emit("Seeked", position));
+		this._interface.on("Seeked", this.seekedListener);
 
 		this._init();
+	}
+
+	destruct(){
+		this.removeAllListeners();
+
+		const props = this._proxyObject.getInterface("org.freedesktop.DBus.Properties");
+		props.removeListener("PropertiesChanged", this.propsListener);
 	}
 
 	async _init(): Promise<void> {

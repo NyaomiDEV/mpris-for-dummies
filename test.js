@@ -57,7 +57,7 @@ async function addPlayer(name){
 }
 
 async function deletePlayer(name){
-	players[name].dispose();
+	players[name].destruct();
 	delete players[name];
 	console.log("Removed player", name);
 }
