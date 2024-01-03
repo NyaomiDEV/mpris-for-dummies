@@ -39,7 +39,7 @@ export default class MediaPlayer2 extends ProxyAbstraction{
 		}
 
 		this.emit("PropertiesChanged", marshallVariants(changed), invalidated);
-	}
+	};
 
 	constructor(proxyObject: ProxyObject){
 		super(proxyObject);

@@ -53,12 +53,12 @@ export default class Player extends ProxyAbstraction {
 		}
 
 		this.emit("PropertiesChanged", marshallVariants(changed), invalidated);
-	}
+	};
 
 	// eslint-disable-next-line no-undef
 	private seekedListener = (position: BigInt) => {
 		this.emit("Seeked", position);
-	}
+	};
 
 	constructor(proxyObject: ProxyObject) {
 		super(proxyObject);
